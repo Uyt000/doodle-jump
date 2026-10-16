@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -41,6 +42,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
     private float tiltX;
 
     private Paint paint;
+    private RectF tmpRect = new RectF(); // временный прямоугольник для коллизий
 
     public GameView(Context context, GameListener listener) {
         super(context);
@@ -122,7 +124,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
                 try {
                     canvas = holder.lockCanvas();
                     if (canvas != null) {
-                        synchronized (holder) { draw(canvas); }
+                        synchronized (holder) { drawGame(canvas); }
                     }
                 } finally {
                     if (canvas != null) holder.unlockCanvasAndPost(canvas);
@@ -133,19 +135,29 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         }
     }
 
+    // Проверка пересечения двух прямоугольников вручную
+    private boolean rectsOverlap(RectF a, RectF b) {
+        return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    }
+
     private void update(float delta) {
+        // Горизонтальное движение через наклон
         float speed = 400f;
         player.x += tiltX * speed * delta;
 
         if (player.x < -Player.WIDTH) player.x = screenWidth;
         if (player.x > screenWidth) player.x = -Player.WIDTH;
 
+        // Вертикальная физика
         player.vy += 1500f * delta;
         player.y += player.vy * delta;
 
+        // Коллизия с платформами (только при падении)
         if (player.vy > 0) {
+            RectF pb = player.getBounds();
             for (Platform p : platforms) {
-                if (player.getBounds().overlaps(p.getBounds())
+                tmpRect.set(p.x, p.y, p.x + Platform.WIDTH, p.y + Platform.HEIGHT);
+                if (rectsOverlap(pb, tmpRect)
                         && player.y + Player.HEIGHT - player.vy * delta <= p.y + 10) {
                     player.vy = -700f;
                     break;
@@ -153,6 +165,7 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
             }
         }
 
+        // Прокрутка камеры
         float threshold = screenHeight * 0.4f;
         if (player.y < threshold) {
             float scroll = threshold - player.y;
@@ -168,12 +181,14 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
             platforms.removeIf(p -> p.y > screenHeight + 200);
         }
 
+        // Счёт = высота
         int newScore = (int) (worldOffsetY / 10);
         if (newScore != score) {
             score = newScore;
             if (listener != null) listener.onScoreChanged(score);
         }
 
+        // Конец игры
         if (player.y > screenHeight + 100) {
             gameOver = true;
             if (score > highScore) {
@@ -185,20 +200,24 @@ public class GameView extends SurfaceView implements SurfaceHolder.Callback, Sen
         }
     }
 
-    private void draw(Canvas canvas) {
+    // ПЕРЕИМЕНОВАНО: drawGame вместо draw (draw — зарезервировано в SurfaceView)
+    private void drawGame(Canvas canvas) {
         canvas.drawColor(0xFF1a1a2e);
 
+        // Платформы
         paint.setColor(0xFF4CAF50);
         for (Platform p : platforms) {
             canvas.drawRect(p.x, p.y, p.x + Platform.WIDTH, p.y + Platform.HEIGHT, paint);
         }
 
+        // Игрок
         paint.setColor(0xFFFFEB3B);
         canvas.drawRect(player.x, player.y, player.x + Player.WIDTH, player.y + Player.HEIGHT, paint);
         paint.setColor(0xFF000000);
         canvas.drawRect(player.x + 6, player.y + 8, player.x + 10, player.y + 12, paint);
         canvas.drawRect(player.x + 18, player.y + 8, player.x + 22, player.y + 12, paint);
 
+        // Экран окончания
         if (gameOver) {
             paint.setColor(0xAA000000);
             canvas.drawRect(0, 0, screenWidth, screenHeight, paint);
