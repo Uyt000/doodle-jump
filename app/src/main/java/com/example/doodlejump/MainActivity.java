@@ -13,7 +13,6 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class MainActivity extends Activity {
@@ -31,7 +30,6 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         prefs = getSharedPreferences("doodle_prefs", Context.MODE_PRIVATE);
 
-        // Загружаем имя игрока. Если пустое — спросим после старта
         playerName = prefs.getString("player_name", "");
 
         container = new FrameLayout(this);
@@ -54,14 +52,12 @@ public class MainActivity extends Activity {
         });
         container.addView(gameView);
 
-        // Верхняя строка: счёт
         scoreText = new TextView(this);
         scoreText.setTextColor(0xFFFFFFFF);
         scoreText.setTextSize(20);
         scoreText.setPadding(30, 30, 0, 0);
         container.addView(scoreText);
 
-        // Имя игрока
         playerText = new TextView(this);
         playerText.setTextColor(0xFF00E5FF);
         playerText.setTextSize(16);
@@ -69,7 +65,6 @@ public class MainActivity extends Activity {
         playerText.setText("Игрок: " + (playerName.isEmpty() ? "—" : playerName));
         container.addView(playerText);
 
-        // Рекорд
         TextView highScoreText = new TextView(this);
         highScoreText.setTextColor(0xFFFFD700);
         highScoreText.setTextSize(18);
@@ -77,7 +72,6 @@ public class MainActivity extends Activity {
         highScoreText.setText("Рекорд: " + prefs.getInt("high_score", 0));
         container.addView(highScoreText);
 
-        // Кнопка "Заново"
         restartButton = new Button(this);
         restartButton.setText("Заново");
         restartButton.setVisibility(View.GONE);
@@ -92,7 +86,6 @@ public class MainActivity extends Activity {
         });
         container.addView(restartButton);
 
-        // Кнопка "Сменить игрока"
         Button changePlayerButton = new Button(this);
         changePlayerButton.setText("Сменить игрока");
         FrameLayout.LayoutParams params2 = new FrameLayout.LayoutParams(
@@ -105,7 +98,6 @@ public class MainActivity extends Activity {
         changePlayerButton.setOnClickListener(v -> showNameDialog());
         container.addView(changePlayerButton);
 
-        // Если имя не задано — сразу спрашиваем
         if (playerName.isEmpty()) {
             showNameDialog();
         }
